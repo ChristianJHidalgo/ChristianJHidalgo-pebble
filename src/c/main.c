@@ -4,6 +4,10 @@ static Window *s_main_window;
 static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 
+// bluetooth layers
+static BitmapLayer *s_bt_icon_layer;
+static GBitmap *s_bt_icon_bitmap;
+
 // Adding the GFonts 
 static GFont s_time_font;
 static GFont s_date_font;
@@ -17,8 +21,19 @@ static void battery_callback(BatteryChargeState state) {
   // Record the new battery level
   s_battery_level = state.charge_percent;
 
-  // Update the meter
+  // Update the meter -battery-
   layer_mark_dirty(s_battery_layer);
+}
+
+//Bluetooth callback -bluetooth-
+static void bluetooth_callback(bool connected) {
+  // Show icon if disconnected
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_icon_layer), connected);
+
+  if (!connected) {
+    // Issue a vibrating alert
+    vibes_double_pulse();
+  }
 }
 
   // Battery Customization Drawer
@@ -112,7 +127,7 @@ text_layer_set_font(s_time_layer, s_time_font);
 text_layer_set_font(s_date_layer, s_date_font);
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
 
-  // Add layers to the Window
+  // Add layers to the Window -date time-
   layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
   
@@ -123,8 +138,25 @@ int bar_y = PBL_IF_ROUND_ELSE(bounds.size.h / 8, bounds.size.h / 28);
 s_battery_layer = layer_create(GRect(bar_x, bar_y, bar_width, 8));
 layer_set_update_proc(s_battery_layer, battery_update_proc);
 
+// Add to Window -battery-
+layer_add_child(window_layer, s_battery_layer);
+  
+// Bluetooth window load -bluetooth-
+  
+// Create the Bluetooth icon GBitmap
+s_bt_icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
+
+// Create the BitmapLayer to display the GBitmap - below the battery bar, centered
+int bt_y = bar_y + 12;
+s_bt_icon_layer = bitmap_layer_create(GRect((bounds.size.w - 30) / 2, bt_y, 30, 30));
+bitmap_layer_set_bitmap(s_bt_icon_layer, s_bt_icon_bitmap);
+bitmap_layer_set_compositing_mode(s_bt_icon_layer, GCompOpSet);
+
 // Add to Window
-layer_add_child(window_layer, s_battery_layer); 
+layer_add_child(window_get_root_layer(window), bitmap_layer_get_layer(s_bt_icon_layer));
+
+// Show the correct state of the BT connection from the start
+bluetooth_callback(connection_service_peek_pebble_app_connection());
   
 }
 
@@ -139,6 +171,10 @@ fonts_unload_custom_font(s_date_font);
   
   // Unload Battery Layer
   layer_destroy(s_battery_layer);
+  
+  // Unload Bluetooth Layer
+  gbitmap_destroy(s_bt_icon_bitmap);
+bitmap_layer_destroy(s_bt_icon_layer);
 
 }
 
@@ -167,8 +203,13 @@ static void init() {
   // Register for battery level updates
 battery_state_service_subscribe(battery_callback);
 
-// Ensure battery level is displayed from the start
+// Ensure battery level is displayed from the start -battery-
 battery_callback(battery_state_service_peek());
+ 
+  // Register for Bluetooth connection updates -bluetooth-
+connection_service_subscribe((ConnectionHandlers) {
+  .pebble_app_connection_handler = bluetooth_callback
+});
   
 }
 

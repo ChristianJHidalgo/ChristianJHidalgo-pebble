@@ -6,9 +6,16 @@
     ],
     "name": "watchface-tutorial",
     "pebble": {
+        "capabilities": [
+            "location"
+        ],
         "displayName": "Tutorial Watchface",
         "enableMultiJS": true,
-        "messageKeys": [],
+        "messageKeys": [
+            "TEMPERATURE",
+            "CONDITIONS",
+            "REQUEST_WEATHER"
+        ],
         "projectType": "native",
         "resources": {
             "media": [
@@ -39,8 +46,8 @@
             "chalk",
             "diorite",
             "emery",
-            "flint",
-            "gabbro"
+            "gabbro",
+            "flint"
         ],
         "uuid": "e2b3ad5e-4ead-4e7f-8173-457fc561587f",
         "watchapp": {
